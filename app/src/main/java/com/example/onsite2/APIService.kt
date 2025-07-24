@@ -8,8 +8,6 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface APIService {
-    @GET("weather/today")
-    suspend fun GetAllUsersSubmissions():List<CityWeatherGet>
 
     @POST("login")
     suspend fun Login(@Body user: User) : CheckSuccess
@@ -24,8 +22,11 @@ interface APIService {
     suspend fun DeleteWeather(@Path("post_id") post_id:Int): CheckSuccess
 
     @GET("weather/today")
-    suspend fun GetTodayWeather(@Query("city") city:String) :List<CityWeatherGet>
+    suspend fun GetAllTodayWeather(@Query("city") city:String) :List<CityWeatherGet>
 
     @GET("userposts")
     suspend fun GetUsersPosts(@Query("username") username:String):List<CityWeatherGet>
+
+    @GET("weather/history")
+    suspend fun GetNData(@Query("city") city:String,@Query("days") days:Int):List<CityWeatherGet>
 }

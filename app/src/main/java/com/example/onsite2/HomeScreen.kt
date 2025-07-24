@@ -2,21 +2,28 @@ package com.example.onsite2
 
 import android.R.attr.label
 import android.R.attr.onClick
+import android.R.attr.singleLine
 import android.graphics.Outline
 import android.graphics.Paint
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -78,7 +86,6 @@ fun HomeScreen(mainViewModel: MainViewModel,navController: NavController,modifie
                 0->{mainViewModel.ResetPostUIState()
                     PostCityData(mainViewModel=mainViewModel)}
                 1->{
-                    mainViewModel.GetUserPosts()
                     GetAllData(mainViewModel=mainViewModel)}
                 2->{GetNData(mainViewModel=mainViewModel)}
                 3->{DeleteData(mainViewModel=mainViewModel)}
@@ -134,7 +141,8 @@ fun PostCityData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
                 OutlinedTextField(
                     value = humidity,
                     onValueChange = { new_text ->
-                        humidity = new_text
+                        if(new_text.toInt()<=100)
+                            humidity = new_text
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     label = { Text("Enter Humidity") },
@@ -182,27 +190,187 @@ fun PostCityData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
 
 }
 @Composable
-fun GetAllData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        mainViewModel.users_posts.forEach { user_post->
-            DataCard(mainViewModel, user_post)
+fun DeleteData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
+    val uistate by mainViewModel.deleteUIState.collectAsState()
+    LaunchedEffect(mainViewModel.deletion_count) {
+        mainViewModel.GetUserPosts()
+    }
+    Box(modifier= Modifier.fillMaxSize()) {
+        when (uistate) {
+            is UIState.None -> {Text("Nothing",modifier=Modifier.align(Alignment.Center))}
+            is UIState.Failure -> {
+                Button(onClick = {
+                    mainViewModel.GetUserPosts()
+                },
+                    modifier=Modifier.align(Alignment.Center)
+                    ) {
+                    Text("Could not fetch Data,Retry")
+                }
+
+            }
+
+            is UIState.Loading -> {CircularProgressIndicator(modifier=Modifier.align(Alignment.Center))}
+            is UIState.Success -> {
+                if(mainViewModel.users_posts.isEmpty()){
+                    Box(modifier = Modifier.fillMaxSize()){
+                        Text(
+                            text="You didn't post any data yet",
+                            modifier=Modifier.align(Alignment.Center)
+                        )
+                    }
+                }
+                else {
+                    Column(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        mainViewModel.users_posts.forEach { user_post ->
+                            DataCard(user_post, showDelete = true, {
+                                mainViewModel.DeleteCityData(post_id = user_post.post_id)
+
+                            })
+                        }
+                    }
+                }
+            }
         }
     }
 }
 @Composable
 fun GetNData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
-
+    var numberOfDays by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    val uistate by mainViewModel.getNUIState.collectAsState()
+    Box(modifier=Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Log.d("general","uistate:${uistate.javaClass.name}")
+            OutlinedTextField(
+                value = city,
+                onValueChange = {
+                    city = it
+                },
+                label = { Text("Enter city name:") },
+                singleLine = true,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                OutlinedTextField(
+                    value = numberOfDays,
+                    onValueChange = {
+                        numberOfDays = it
+                    },
+                    label = { Text("Enter Number of Days") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = {
+                    mainViewModel.GetNData(city, numberOfDays.toInt())
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null
+                    )
+                }
+            }
+            Box(modifier=Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    when (uistate) {
+                        is UIState.Failure -> {
+                            Log.d("general","${(uistate as UIState.Failure).error_msg}")
+                            Toast.makeText(LocalContext.current,"Failed to make text${(uistate as UIState.Failure).error_msg}",Toast.LENGTH_SHORT).show()}
+                        is UIState.Loading -> {
+                            CircularProgressIndicator()
+                        }
+                        is UIState.None -> {Text("Nothing")
+                            Toast.makeText(LocalContext.current,"Nothing to make text",Toast.LENGTH_SHORT)}
+                        is UIState.Success -> {
+                            mainViewModel.Nposts.forEach { npost->
+                                DataCard(npost, showDelete = false, onDeleteClick = {})
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 @Composable
-fun DeleteData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
-
+fun GetAllData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
+    var city by remember { mutableStateOf("") }
+    val uistate by mainViewModel.getAllUIState.collectAsState()
+    Box(modifier=Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Log.d("general","uistate:${uistate.javaClass.name}")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = {
+                        city = it
+                    },
+                    label = { Text("Enter City Name:") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = {
+                    mainViewModel.GetAllWeatherForCity(city)
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null
+                    )
+                }
+            }
+            Box(modifier=Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    when (uistate) {
+                        is UIState.Failure -> {
+                            Log.d("general","${(uistate as UIState.Failure).error_msg}")
+                            Toast.makeText(LocalContext.current,"Error:${(uistate as UIState.Failure).error_msg}",Toast.LENGTH_SHORT).show()}
+                        is UIState.Loading -> {
+                            CircularProgressIndicator()
+                        }
+                        is UIState.None -> {
+                            Text("Nothing")
+                        }
+                        is UIState.Success -> {
+                            mainViewModel.all_city_today.forEach { city_today->
+                                DataCard(city_today, showDelete = false, onDeleteClick = {})
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 @Composable
-fun DataCard(mainViewModel: MainViewModel, weatherGet: CityWeatherGet,showDelete:Boolean=false){
+fun DataCard(weatherGet: CityWeatherGet,showDelete:Boolean=false,onDeleteClick:()->Unit){
     Card(modifier=Modifier.fillMaxWidth()) {
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier=Modifier.fillMaxWidth()
+            modifier=Modifier.fillMaxWidth().padding(8.dp)
         ) {
             Text(
                 "post_id:"+weatherGet.post_id
@@ -219,10 +387,14 @@ fun DataCard(mainViewModel: MainViewModel, weatherGet: CityWeatherGet,showDelete
             Text(
                 "pincode:"+weatherGet.pincode
             )
+            Text(
+                "created at(UTC): "+weatherGet.created_at
+            )
+
             if(showDelete){
                 IconButton(
                     onClick={
-                        mainViewModel.DeleteCityData(post_id = weatherGet.post_id)
+                        onDeleteClick()
                     }
                 ) {
                     Icon(
