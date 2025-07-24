@@ -52,7 +52,7 @@ import androidx.navigation.NavController
 
 @Composable
 fun HomeScreen(mainViewModel: MainViewModel,navController: NavController,modifier: Modifier =Modifier){
-    val tabs = remember{ mutableStateListOf("POST","GET all","Past N","DELETE") }
+    val tabs = remember{ mutableStateListOf("POST","GET all","Post N","DELETE") }
     var cur_selected by remember { mutableStateOf(0) }
     Box(modifier=Modifier.fillMaxSize()){
         Column(
@@ -83,7 +83,7 @@ fun HomeScreen(mainViewModel: MainViewModel,navController: NavController,modifie
                 }
             }
             when(cur_selected){
-                0->{mainViewModel.ResetPostUIState()
+                0->{
                     PostCityData(mainViewModel=mainViewModel)}
                 1->{
                     GetAllData(mainViewModel=mainViewModel)}
@@ -174,6 +174,7 @@ fun PostCityData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
         }
         when(postUIState.value){
             is UIState.Failure -> {
+                mainViewModel.ResetPostUIState()
                 Toast.makeText(context,(postUIState.value as UIState.Failure).error_msg, Toast.LENGTH_SHORT).show()
             }
             is UIState.Loading -> {
@@ -183,6 +184,7 @@ fun PostCityData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
 
             }
             is UIState.Success -> {
+                mainViewModel.ResetPostUIState()
                 Toast.makeText(context,"Posted Data Successfully", Toast.LENGTH_SHORT).show()
             }
         }
@@ -287,6 +289,7 @@ fun GetNData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
                 ) {
                     when (uistate) {
                         is UIState.Failure -> {
+                            mainViewModel.ResetNUIState()
                             Log.d("general","${(uistate as UIState.Failure).error_msg}")
                             Toast.makeText(LocalContext.current,"Failed to make text${(uistate as UIState.Failure).error_msg}",Toast.LENGTH_SHORT).show()}
                         is UIState.Loading -> {
@@ -295,6 +298,7 @@ fun GetNData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
                         is UIState.None -> {Text("Nothing")
                             Toast.makeText(LocalContext.current,"Nothing to make text",Toast.LENGTH_SHORT)}
                         is UIState.Success -> {
+                            mainViewModel.ResetNUIState()
                             mainViewModel.Nposts.forEach { npost->
                                 DataCard(npost, showDelete = false, onDeleteClick = {})
                             }
@@ -346,6 +350,7 @@ fun GetAllData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
                 ) {
                     when (uistate) {
                         is UIState.Failure -> {
+                            mainViewModel.ResetGetAllUIState()
                             Log.d("general","${(uistate as UIState.Failure).error_msg}")
                             Toast.makeText(LocalContext.current,"Error:${(uistate as UIState.Failure).error_msg}",Toast.LENGTH_SHORT).show()}
                         is UIState.Loading -> {
@@ -355,6 +360,7 @@ fun GetAllData(mainViewModel: MainViewModel,modifier: Modifier=Modifier){
                             Text("Nothing")
                         }
                         is UIState.Success -> {
+                            mainViewModel.ResetGetAllUIState()
                             mainViewModel.all_city_today.forEach { city_today->
                                 DataCard(city_today, showDelete = false, onDeleteClick = {})
                             }

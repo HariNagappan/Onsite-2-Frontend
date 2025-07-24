@@ -54,9 +54,13 @@ class MainViewModel: ViewModel() {
     fun ResetPostUIState(){
         _postUIState.value= UIState.None
     }
-    fun ResetDeleteUIState(){
-        _deleteUIState.value= UIState.None
+    fun ResetNUIState(){
+        _getNUIState.value= UIState.None
     }
+    fun ResetGetAllUIState(){
+        _getAllUIState.value= UIState.None
+    }
+
 
     fun Login(){
         viewModelScope.launch {
@@ -138,7 +142,7 @@ class MainViewModel: ViewModel() {
             }
         }
     }
-    fun GetUserPosts(){
+    fun GetUserPosts() {
         viewModelScope.launch {
             try {
                 _deleteUIState.value= UIState.Loading
